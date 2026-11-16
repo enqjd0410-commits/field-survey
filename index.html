@@ -111,7 +111,7 @@ label.f input,label.f select{margin-top:3px}
 <input type="file" id="fileIn" accept="image/*" multiple style="display:none">
 <script>
 /* 서버 주소를 여기에 넣어 두면 팀원은 암호와 이름만 입력하면 됩니다 (비워 두면 첫 화면에서 입력) */
-const DEFAULT_API_URL = "https://script.google.com/macros/library/d/1PstATKy0yqKpO-L8LaJQ1BIAf3WHXbIRTSIlVs2iNr8W3uPyvNGndDQj/4";
+const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxL84gdvPJD7JC0KUqCDlM_dkgepV1tup3U99Uofb6H0PiwEW4Br3h1Gulq0pWwUxbWig/exec";
 const CFG = { url: "", key: "" };
 try{ CFG.url=localStorage.getItem("fs3_url")||DEFAULT_API_URL; CFG.key=localStorage.getItem("fs3_key")||""; }catch(e){ CFG.url=DEFAULT_API_URL; }
 async function apiRun(fn,...args){

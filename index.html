@@ -59,7 +59,7 @@ label.f input,label.f select{margin-top:3px}
 .err{color:#c0392b;font-size:13px;min-height:16px}
 .empty{color:var(--mut);padding:20px;text-align:center}
 .lbl{fill:var(--tx);paint-order:stroke;stroke:var(--card)}
-.sk{display:none;position:fixed;inset:0;background:var(--bg);z-index:30;flex-direction:column}
+.sk{display:none;position:fixed;inset:0;background:var(--bg);z-index:30;flex-direction:column;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
 .sk .tb{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border-bottom:1px solid var(--line);background:var(--card);align-items:center}
 .sk .tb button{min-height:40px;padding:4px 10px}
 .sk .tb .sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);padding:0;min-height:0}
@@ -111,7 +111,7 @@ label.f input,label.f select{margin-top:3px}
 <input type="file" id="fileIn" accept="image/*" multiple style="display:none">
 <script>
 /* 서버 주소를 여기에 넣어 두면 팀원은 암호와 이름만 입력하면 됩니다 (비워 두면 첫 화면에서 입력) */
-const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxL84gdvPJD7JC0KUqCDlM_dkgepV1tup3U99Uofb6H0PiwEW4Br3h1Gulq0pWwUxbWig/exec";
+const DEFAULT_API_URL = "";
 const CFG = { url: "", key: "" };
 try{ CFG.url=localStorage.getItem("fs3_url")||DEFAULT_API_URL; CFG.key=localStorage.getItem("fs3_key")||""; }catch(e){ CFG.url=DEFAULT_API_URL; }
 async function apiRun(fn,...args){
@@ -211,11 +211,11 @@ function drawLabels(){
   const fs=12/view.s;
   allItems().filter(d=>passes(d)&&inView(d)).slice(0,250).forEach(d=>{ const t=el("text",{x:X(d.x)+8/view.s,y:Y(d.y)-6/view.s,"font-size":fs,class:"lbl","stroke-width":3/view.s},g); t.textContent=d.name; });
 }
-const ptrs=new Map(); let last=null, moved=false, pinch0=null;
-svg.addEventListener("pointerdown",e=>{svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=false;last={x:e.clientX,y:e.clientY};if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),s:view.s,tx:view.tx,ty:view.ty,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2};}});
+const ptrs=new Map(); let last=null, moved=false, pinch0=null, down={x:0,y:0};
+svg.addEventListener("pointerdown",e=>{svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=false;last={x:e.clientX,y:e.clientY};down={x:e.clientX,y:e.clientY};if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),s:view.s,tx:view.tx,ty:view.ty,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2};}});
 svg.addEventListener("pointermove",e=>{ if(!ptrs.has(e.pointerId))return; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2&&pinch0){const r=svg.getBoundingClientRect();const [a,b]=[...ptrs.values()];const k=Math.hypot(a.x-b.x,a.y-b.y)/pinch0.d;const cx=pinch0.cx-r.left,cy=pinch0.cy-r.top;view.s=Math.min(80,Math.max(.05,pinch0.s*k));view.tx=cx-(cx-pinch0.tx)*(view.s/pinch0.s);view.ty=cy-(cy-pinch0.ty)*(view.s/pinch0.s);moved=true;vp.setAttribute("transform",`translate(${view.tx},${view.ty}) scale(${view.s})`);resizeDots();return;}
-  if(ptrs.size===1&&last){const dx=e.clientX-last.x,dy=e.clientY-last.y;if(Math.abs(dx)+Math.abs(dy)>3)moved=true;view.tx+=dx;view.ty+=dy;last={x:e.clientX,y:e.clientY};vp.setAttribute("transform",`translate(${view.tx},${view.ty}) scale(${view.s})`);}});
+  if(ptrs.size===1&&last){const dx=e.clientX-last.x,dy=e.clientY-last.y;if(!moved&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<=(e.pointerType==="touch"?12:5)) return; moved=true;view.tx+=dx;view.ty+=dy;last={x:e.clientX,y:e.clientY};vp.setAttribute("transform",`translate(${view.tx},${view.ty}) scale(${view.s})`);}});
 function endPtr(e){ const tap=!moved&&ptrs.size===1; ptrs.delete(e.pointerId); if(ptrs.size<2)pinch0=null; if(ptrs.size===0){ if(moved)applyView(); else if(tap)tapAt(e); last=null; } }
 svg.addEventListener("pointerup",endPtr); svg.addEventListener("pointercancel",e=>{ptrs.delete(e.pointerId);pinch0=null;});
 svg.addEventListener("wheel",e=>{e.preventDefault();const r=svg.getBoundingClientRect();const cx=e.clientX-r.left,cy=e.clientY-r.top;const k=e.deltaY<0?1.2:1/1.2;const ns=Math.min(80,Math.max(.05,view.s*k));view.tx=cx-(cx-view.tx)*(ns/view.s);view.ty=cy-(cy-view.ty)*(ns/view.s);view.s=ns;applyView();},{passive:false});
@@ -422,7 +422,7 @@ document.getElementById("exportBtn").onclick=async()=>{
   const pre=document.createElement("pre"); pre.style.whiteSpace="pre-wrap"; pre.style.fontSize="13px"; pre.style.background="var(--bg)"; pre.style.padding="8px"; pre.style.borderRadius="8px";
   pre.textContent="입력자: "+(S.who||"미지정")+"\n대기 기록: "+Object.keys(S.pending).length+"건 / 대기 사진: "+S.photosQ.length+"장"+(S.lastErr?"\n마지막 저장 오류: "+S.lastErr:"")+(S.lastUp?"\n"+S.lastUp:"");
   const pg=document.createElement("button"); pg.textContent="연결 점검"; pg.style.width="100%";
-  pg.onclick=async()=>{ pg.textContent="점검 중…"; try{ const r=await run("ping"); pre.textContent+="\n\n[연결 점검]\n시트: "+r.sheet+"\n사진 폴더: "+r.drive+"\n파일 쓰기: "+r.write; }catch(e){ pre.textContent+="\n\n[연결 점검] 서버 호출 실패: "+errText(e); } pg.textContent="연결 점검"; };
+  pg.onclick=async()=>{ pg.textContent="점검 중…"; try{ const r=await run("ping"); pre.textContent+="\n\n[연결 점검]\n시트: "+r.sheet+"\n사진 폴더: "+r.drive+"\n파일 쓰기: "+r.write+"\n서버 지장물 데이터: "+(r.data||"확인 불가(서버가 예전 버전)")+" / 지금 화면: "+document.getElementById("progTxt").textContent; }catch(e){ pre.textContent+="\n\n[연결 점검] 서버 호출 실패: "+errText(e); } pg.textContent="연결 점검"; };
   const rt=document.createElement("button"); rt.textContent="실패한 사진 다시 보내기"; rt.style.width="100%"; rt.style.marginTop="6px"; rt.onclick=()=>{ retryFailed(); M.style.display="none"; };
   const cl=document.createElement("button"); cl.textContent="닫기"; cl.style.width="100%"; cl.style.marginTop="6px"; cl.onclick=()=>M.style.display="none";
   C.append(p,a,pre,pg,rt,cl); M.style.display="flex";
@@ -478,11 +478,11 @@ const SEGCOL="#e0218a";
 function drawSeg(g,p,hi){ const dd=pth(p);
   if(p.length>1){ el("path",{d:dd,fill:"none",stroke:"#fff","stroke-width":hi?8:6,"stroke-linecap":"round","stroke-linejoin":"round","vector-effect":"non-scaling-stroke"},g);
     el("path",{d:dd,fill:"none",stroke:SEGCOL,"stroke-width":hi?4.5:3,"stroke-dasharray":"8 4","stroke-linecap":"round","stroke-linejoin":"round","vector-effect":"non-scaling-stroke"},g); }
-  p.forEach((q,i)=>{ const first=i===0,lastp=i===p.length-1; if(!first&&!lastp&&!SEG.on) return;
+  p.forEach((q,i)=>{ const first=i===0,lastp=i===p.length-1; if(!first&&!lastp&&!SEG.on&&!hi) return;
     el("circle",{class:"segm",cx:X(q[0]),cy:Y(q[1]),r:2,fill:first?"#1e9e3a":(lastp?"#d93a36":SEGCOL),stroke:"#fff","stroke-width":2,"vector-effect":"non-scaling-stroke"},g); }); }
 function segStart(d){ if(!ensureWho())return; SEG.on=true; SEG.id=d.id; SEG.pts=(draft.seg||[]).map(p=>p.slice());
   document.getElementById("segBar").style.display="flex"; segUpd(); drawItems(); }
-function segUpd(){ const n=SEG.pts.length; document.getElementById("segTxt").textContent= n===0?"도면에서 시작점을 누르세요":(n===1?"끝점(꺾이는 곳은 중간점)을 누르세요":`${n}점 · 도면상 ${segLen(SEG.pts)}m`); document.getElementById("segOk").disabled=n<2; }
+function segUpd(){ const n=SEG.pts.length; document.getElementById("segTxt").textContent= n===0?"도면에서 시작점을 누르세요":(n===1?"다음 점을 누르세요 (꺾이는 곳마다 차례로 누르고, 마지막 점이 끝점)":`${n}점 · 도면상 ${segLen(SEG.pts)}m · 계속 누르면 꺾이는 점이 추가됩니다. 다 찍었으면 구간 확정`); document.getElementById("segOk").disabled=n<2; }
 function segTap(sx,sy){ let x=sx+minx, y=maxy-sy;
   const d=itemOf(SEG.id);
   if(d&&d.g&&!d.isNew){ let best=null,bd=14/view.s; d.g.forEach(r=>{ const rr=d.gt==="P"?r.concat([r[0]]):r; for(let i=0;i<rr.length-1;i++){ const ax=rr[i][0],ay=rr[i][1],bx=rr[i+1][0],by=rr[i+1][1]; const vx=bx-ax,vy=by-ay,l=vx*vx+vy*vy; let t=l?((x-ax)*vx+(y-ay)*vy)/l:0; t=Math.max(0,Math.min(1,t)); const px=ax+t*vx,py=ay+t*vy, dd=Math.hypot(px-x,py-y); if(dd<bd){bd=dd;best=[px,py];} } }); if(best){x=best[0];y=best[1];} }
@@ -505,10 +505,29 @@ function skDraw(){ const r=skc.getBoundingClientRect(); skx.fillStyle="#fff"; sk
     skx.fillStyle="#6b6a65"; skx.font="14px sans-serif"; skx.fillText(`도면 모양 · 가로 ${W.toFixed(1)}m × 세로 ${H.toFixed(1)}m (북쪽 위)`,10,20); }
   SK.strokes.concat(SK.cur?[SK.cur]:[]).forEach(s=>{ skx.strokeStyle=s.er?"#fff":s.c; skx.lineWidth=s.w; skx.lineCap="round"; skx.lineJoin="round"; skx.beginPath(); s.p.forEach(([x,y],i)=>i?skx.lineTo(x,y):skx.moveTo(x,y)); if(s.p.length===1){skx.lineTo(s.p[0][0]+0.1,s.p[0][1]);} skx.stroke(); });
 }
-function openSketch(d){ SK.d=d; SK.strokes=[]; SK.cur=null; SK.bg=true; document.getElementById("skBg").textContent="도면 모양 끄기"; document.getElementById("skTitle").textContent=d.name+" 스케치"; document.getElementById("sk").style.display="flex"; requestAnimationFrame(skSize); }
-skc.addEventListener("pointerdown",e=>{ skc.setPointerCapture(e.pointerId); const r=skc.getBoundingClientRect(); SK.cur={c:SK.color,w:SK.eraser?22:SK.w,er:SK.eraser,p:[[e.clientX-r.left,e.clientY-r.top]]}; skDraw(); });
-skc.addEventListener("pointermove",e=>{ if(!SK.cur)return; const r=skc.getBoundingClientRect(); SK.cur.p.push([e.clientX-r.left,e.clientY-r.top]); skDraw(); });
-const skEnd=()=>{ if(SK.cur){SK.strokes.push(SK.cur);SK.cur=null;skDraw();} }; skc.addEventListener("pointerup",skEnd); skc.addEventListener("pointercancel",skEnd);
+function openSketch(d){ SK.d=d; SK.strokes=[]; SK.cur=null; SK.pid=null; SK.bg=true; document.getElementById("skBg").textContent="도면 모양 끄기"; document.getElementById("skTitle").textContent=d.name+" 스케치"; document.getElementById("sk").style.display="flex"; requestAnimationFrame(skSize); }
+/* 스케치 입력: 펜(애플펜슬)을 한 번이라도 쓰면 그 뒤로 손바닥·손가락 터치는 무시 */
+SK.pid=null; SK.pen=false;
+function skPt(e,r){ return [e.clientX-r.left,e.clientY-r.top]; }
+function skSeg(s,a,b){ skx.strokeStyle=s.er?"#fff":s.c; skx.lineWidth=s.w; skx.lineCap="round"; skx.lineJoin="round"; skx.beginPath(); skx.moveTo(a[0],a[1]); skx.lineTo(b[0]+(a===b?0.1:0),b[1]); skx.stroke(); }
+skc.addEventListener("pointerdown",e=>{ e.preventDefault();
+  if(e.pointerType==="pen"){ SK.pen=true; if(SK.cur&&SK.cur.t!=="pen"){ SK.cur=null; SK.pid=null; skDraw(); } }
+  else if(e.pointerType==="touch"&&SK.pen) return;           // 손바닥 무시
+  if(SK.cur) return;                                         // 그리는 중에 다른 손가락이 닿아도 무시
+  try{ skc.setPointerCapture(e.pointerId); }catch(x){}
+  const r=skc.getBoundingClientRect(); SK.pid=e.pointerId;
+  SK.cur={c:SK.color,w:SK.eraser?22:SK.w,er:SK.eraser,t:e.pointerType,p:[skPt(e,r)]}; skSeg(SK.cur,SK.cur.p[0],SK.cur.p[0]); },{passive:false});
+skc.addEventListener("pointermove",e=>{ if(!SK.cur||e.pointerId!==SK.pid) return; e.preventDefault();
+  const r=skc.getBoundingClientRect(); const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
+  evs.forEach(ev=>{ const q=skPt(ev,r), p=SK.cur.p; const last=p[p.length-1]; p.push(q); skSeg(SK.cur,last,q); }); },{passive:false});
+const skEnd=e=>{ if(!SK.cur||e.pointerId!==SK.pid) return; SK.strokes.push(SK.cur); SK.cur=null; SK.pid=null; };
+skc.addEventListener("pointerup",skEnd); skc.addEventListener("pointercancel",skEnd); skc.addEventListener("lostpointercapture",skEnd);
+// iOS 길게 누르기 메뉴·확대·텍스트 선택 막기 (스케치 화면에서만)
+const skBox=document.getElementById("sk");
+["touchstart","touchmove"].forEach(t=>skc.addEventListener(t,ev=>ev.preventDefault(),{passive:false}));
+["gesturestart","gesturechange"].forEach(t=>document.addEventListener(t,ev=>{ if(skBox.style.display==="flex") ev.preventDefault(); },{passive:false}));
+skBox.addEventListener("contextmenu",ev=>ev.preventDefault());
+skBox.addEventListener("selectstart",ev=>ev.preventDefault());
 document.querySelectorAll(".sk .sw").forEach(b=>b.onclick=()=>{ SK.color=b.dataset.c; SK.eraser=false; document.getElementById("skE").classList.remove("on"); document.querySelectorAll(".sk .sw").forEach(x=>x.classList.toggle("on",x===b)); });
 document.getElementById("skW").onclick=e=>{ SK.w=SK.w===3?7:3; e.target.textContent=SK.w===3?"굵게":"가늘게"; };
 document.getElementById("skE").onclick=e=>{ SK.eraser=!SK.eraser; e.target.classList.toggle("on",SK.eraser); };
@@ -541,11 +560,12 @@ if(!S.who) setTimeout(askWho,600);
     try{ data=await apiRun("getData"); try{ localStorage.setItem("fs3_data",JSON.stringify(data)); }catch(x){} }
     catch(err){
       const cached=(()=>{ try{ return JSON.parse(localStorage.getItem("fs3_data")||"null"); }catch(x){ return null; } })();
-      if(cached && auto && !/암호/.test(err.message)){ data=cached; }
+      if(cached && auto && !/암호/.test(err.message)){ data=cached; window.__staleMsg=err.message; }
       else { e.textContent=err.message; go.textContent="시작"; return; }
     }
     try{ localStorage.setItem("fs3_url",url); localStorage.setItem("fs3_key",key); localStorage.setItem("fs2_who",who); }catch(x){}
     L.style.display="none"; START(data);
+    if(window.__staleMsg){ const bn=document.createElement("div"); bn.style.cssText="position:fixed;left:0;right:0;bottom:0;z-index:40;background:#a35b00;color:#fff;padding:10px 14px;font-size:14px"; bn.textContent="⚠ 서버에서 최신 지장물 목록을 받지 못해 이 태블릿에 저장된 예전 목록("+((data.items||[]).length)+"건)으로 열었습니다. 원인: "+window.__staleMsg+"  (눌러서 닫기)"; bn.onclick=()=>bn.remove(); document.body.appendChild(bn); }
   }
   go.onclick=()=>login(false);
   [u,k,w].forEach(x=>x.addEventListener("keydown",ev=>{ if(ev.key==="Enter") login(false); }));

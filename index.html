@@ -33,6 +33,9 @@ svg#map{width:100%;height:100%;display:block;user-select:none}
 .lg svg{flex:0 0 auto}
 .segbar{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:none;gap:6px;align-items:center;background:var(--card);border:2px solid #e0218a;border-radius:10px;padding:6px 8px;font-size:13px;z-index:4;max-width:96%;flex-wrap:wrap;justify-content:center}
 .segbar button{min-height:38px;padding:4px 10px}
+.phw{position:relative;display:inline-block}
+.phx{position:absolute;top:-8px;right:-8px;min-height:0;width:28px;height:28px;padding:0;border-radius:14px;background:#fff;border:1px solid #c0392b;color:#c0392b;font-size:13px;line-height:1}
+.phx.on{width:auto;padding:0 6px;background:#c0392b;color:#fff}
 .addhint{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:var(--sel);color:#000;border-radius:8px;padding:6px 12px;font-size:13px;display:none}
 .side{display:flex;flex-direction:column;gap:10px;min-height:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -283,7 +286,11 @@ function renderForm(){
   const memo=document.createElement("textarea"); memo.rows=2; memo.placeholder="메모 (예: 일부 매몰, 덮개 있음)"; memo.value=draft.memo; memo.oninput=()=>{draft.memo=memo.value;}; mw.appendChild(memo);
   F.appendChild(mw);
   const ph=document.createElement("div"); ph.className="photos";
-  draft.photos.forEach((pid,i)=>{ if(S.previews[pid]){ const im=document.createElement("img"); im.src=S.previews[pid]; im.alt="사진"; im.onclick=()=>showPhoto(S.previews[pid]); ph.appendChild(im); } else { const a=document.createElement("a"); a.className="ph"; a.href="https://drive.google.com/file/d/"+pid+"/view"; a.target="_blank"; a.rel="noopener"; a.textContent="파일 "+(i+1)+" 보기"; ph.appendChild(a); } });
+  draft.photos.forEach((pid,i)=>{ const wr=document.createElement("span"); wr.className="phw";
+    if(S.previews[pid]){ const im=document.createElement("img"); im.src=S.previews[pid]; im.alt="사진"; im.onclick=()=>showPhoto(S.previews[pid]); wr.appendChild(im); } else { const a=document.createElement("a"); a.className="ph"; a.href="https://drive.google.com/file/d/"+pid+"/view"; a.target="_blank"; a.rel="noopener"; a.textContent="파일 "+(i+1)+" 보기"; wr.appendChild(a); }
+    const x=document.createElement("button"); x.type="button"; x.className="phx"; x.textContent="✕"; x.title="이 사진 삭제";
+    x.onclick=()=>{ if(x.dataset.c!=="1"){ x.dataset.c="1"; x.textContent="삭제?"; x.classList.add("on"); setTimeout(()=>{ if(x.isConnected){ x.dataset.c=""; x.textContent="✕"; x.classList.remove("on"); } },2500); return; } removePhoto(d,pid); };
+    wr.appendChild(x); ph.appendChild(wr); });
   S.photosQ.filter(q=>q.id===S.sel).forEach(q=>{const dv=document.createElement("div");dv.className="ph";
     if(q.err){ dv.textContent="실패 · 눌러서 다시"; dv.style.color="#c0392b"; dv.style.borderColor="#c0392b"; dv.style.cursor="pointer"; dv.title=q.err; dv.onclick=()=>{ q.err=null; uploadQueue(); renderForm(); }; }
     else dv.textContent=q.busy?"업로드 중":"대기 중";
@@ -304,6 +311,8 @@ function renderForm(){
   if(draft.seg&&draft.seg.length>1){ const L0=segLen(draft.seg); const info=document.createElement("span"); info.className="mut"; info.textContent=`구간 ${draft.seg.length}점 · 도면상 ${L0}m`; const fl=document.createElement("button"); fl.type="button"; fl.textContent="L에 넣기"; fl.onclick=()=>{ draft.L=String(L0); renderForm(); }; const rm=document.createElement("button"); rm.type="button"; rm.textContent="구간 삭제"; rm.onclick=()=>{ draft.seg=null; renderForm(); drawItems(); }; sgw.append(info,fl,rm); }
   F.insertBefore(sgw,bt);
   const skb=document.createElement("button"); skb.type="button"; skb.textContent="✏️ 스케치 그리기"; skb.style.width="100%"; skb.style.marginTop="8px"; skb.onclick=()=>openSketch(d); F.insertBefore(skb,bt);
+  if(!d.isNew && (recOf(d.id)||S.pending[d.id])){ const rs=document.createElement("button"); rs.type="button"; rs.textContent="이 지장물 입력 기록 지우기 (미조사로 되돌림)"; rs.style.marginTop="8px"; rs.style.width="100%"; rs.style.color="#c0392b";
+    rs.onclick=()=>{ if(rs.dataset.c!=="1"){ rs.dataset.c="1"; rs.textContent="한 번 더 누르면 실측값·메모·구간·사진이 모두 지워집니다"; setTimeout(()=>{ if(rs.isConnected){ rs.dataset.c=""; rs.textContent="이 지장물 입력 기록 지우기 (미조사로 되돌림)"; } },3000); return; } clearRecord(d); }; F.appendChild(rs); }
   if(d.isNew){ const del=document.createElement("button"); del.type="button"; del.textContent="이 신규 항목 삭제"; del.style.marginTop="8px"; del.style.width="100%"; del.onclick=()=>{ if(del.dataset.c!=="1"){del.dataset.c="1";del.textContent="한 번 더 누르면 삭제됩니다";return;} const r={...(recOf(d.id)||{}),id:d.id,deleted:true,isNew:true,at:new Date().toISOString()}; queueWrite(r); S.sel=null; drawItems(); drawLabels(); renderList(); renderForm(); }; F.appendChild(del); }
 }
 function bboxOf(d){ let a=Infinity,b=Infinity,c=-Infinity,e=-Infinity; d.g.forEach(r=>r.forEach(([x,y])=>{a=Math.min(a,x);c=Math.max(c,x);b=Math.min(b,y);e=Math.max(e,y);})); return [a,b,c,e]; }
@@ -325,13 +334,25 @@ function saveCur(done){
   const num=v=>String(v).trim()===""||/^\d+(\.\d+)?$/.test(String(v).trim());
   for(const k of ["L","A","w","h"]) if(!num(draft[k])){ err.textContent="숫자만 입력하세요 (예: 12.5)"; return; }
   if(done && !draft.L && !draft.A && !draft.exist && !draft.photos.length && !(draft.seg&&draft.seg.length>1)){ err.textContent="실측값, 현장 확인, 사진 중 하나는 있어야 완료할 수 있습니다"; return; }
-  const prev=recOf(d.id)||{};
+  const prev={...(recOf(d.id)||{})}; delete prev.removePhotos;
   const rec={...prev, id:d.id, name:d.name, kind:d.isNew?draft.kind:d.kind, L:String(draft.L).trim(), A:String(draft.A).trim(), w:String(draft.w).trim(), h:String(draft.h).trim(), mat:draft.mat, matEtc:draft.mat==="기타"?draft.matEtc:"", exist:draft.exist, memo:draft.memo, photos:draft.photos.slice(), done:done?true:!!prev.done, by:S.who, at:new Date().toISOString()};
   rec.seg=draft.seg&&draft.seg.length>1?draft.seg.map(p=>[Math.round(p[0]*100)/100,Math.round(p[1]*100)/100]):""; rec.segLen=rec.seg?segLen(rec.seg):"";
   if(d.isNew){ rec.isNew=true; rec.x=d.x; rec.y=d.y; if(rec.seg){ rec.x=rec.seg[0][0]; rec.y=rec.seg[0][1]; } }
   queueWrite(rec); err.textContent=""; err.style.color="var(--ok)"; err.textContent=done?"완료 저장됨":"임시 저장됨";
   drawItems(); drawLabels(); renderList();
 }
+function removePhoto(d,pid){
+  draft.photos=draft.photos.filter(x=>x!==pid);
+  const prev=S.pending[d.id]||recOf(d.id)||{id:d.id,name:d.name,kind:d.kind,photos:[]};
+  const rec={...prev, photos:(prev.photos||[]).filter(x=>x!==pid), removePhotos:[...(prev.removePhotos||[]),pid], by:S.who, at:new Date().toISOString()};
+  queueWrite(rec); renderForm(); renderList();
+  const e=document.getElementById("ferr"); if(e){ e.style.color="var(--ok)"; e.textContent="사진을 삭제했습니다 (드라이브 휴지통으로 이동)"; } }
+function clearRecord(d){
+  const prev=S.pending[d.id]||recOf(d.id)||{};
+  const rec={id:d.id,name:d.name,kind:d.kind,L:"",A:"",w:"",h:"",mat:"",matEtc:"",exist:"",memo:"",photos:[],removePhotos:[...(prev.photos||[]),...(prev.removePhotos||[])],done:false,seg:"",segLen:"",by:S.who,at:new Date().toISOString()};
+  queueWrite(rec); S.photosQ=S.photosQ.filter(q=>q.id!==d.id||q.busy);
+  select(d.id,false);
+  const e=document.getElementById("ferr"); if(e){ e.style.color="var(--ok)"; e.textContent="입력 기록을 지웠습니다 (사진은 드라이브 휴지통으로 이동)"; } }
 /* ---------- new item ---------- */
 document.getElementById("addBtn").onclick=()=>{ S.addMode=!S.addMode; document.getElementById("addHint").textContent="도면에서 새 지장물 위치를 누르세요"; document.getElementById("addHint").style.display=S.addMode?"block":"none"; document.getElementById("addBtn").classList.toggle("pri",S.addMode); };
 function createNew(x,y){
@@ -344,12 +365,14 @@ function createNew(x,y){
 }
 /* ---------- sync ---------- */
 function persist(){ try{localStorage.setItem("fs2_pending",JSON.stringify(S.pending));}catch(e){} }
-function queueWrite(rec){ S.pending[rec.id]=rec; persist(); setSync(); flush(); }
+function queueWrite(rec){ const old=S.pending[rec.id];
+  if(old&&old.removePhotos&&old!==rec){ const rm=Array.from(new Set([...(rec.removePhotos||[]),...old.removePhotos])); rec={...rec,removePhotos:rm,photos:(rec.photos||[]).filter(x=>!rm.includes(x))}; }
+  S.pending[rec.id]=rec; persist(); setSync(); flush(); }
 let flushing=false;
 async function flush(){
   if(flushing) return; flushing=true;
   try{ for(const id of Object.keys(S.pending)){ const rec=S.pending[id];
-      try{ const r=await run("saveRecord", JSON.parse(JSON.stringify(rec))); S.online=true; if(S.pending[id]===rec){ delete S.pending[id]; S.recs[id]={...rec,photos:r&&r.photos||rec.photos}; persist(); } }
+      try{ const r=await run("saveRecord", JSON.parse(JSON.stringify(rec))); S.online=true; if(S.pending[id]===rec){ delete S.pending[id]; S.recs[id]={...rec,photos:r&&r.photos||rec.photos}; delete S.recs[id].removePhotos; persist(); } }
       catch(e){ S.online=false; S.lastErr=(e&&e.message)||String(e); break; } } }
   finally{ flushing=false; setSync(); renderList(); }
 }

@@ -38,6 +38,17 @@ svg#map{width:100%;height:100%;display:block;user-select:none}
 .phx.on{width:auto;padding:0 6px;background:#c0392b;color:#fff}
 .mapctl .tg{color:#999}
 .mapctl .tg.on{color:#fff;background:#e8590c;border-color:#e8590c}
+.cam{display:none;position:fixed;inset:0;background:#000;z-index:35;-webkit-user-select:none;user-select:none;touch-action:none}
+.cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+.camtop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:12px 16px;color:#fff;font-size:17px;background:linear-gradient(#000a,#0000)}
+.camflash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+.camstrip{position:absolute;left:12px;right:12px;bottom:118px;display:flex;gap:6px;overflow-x:auto}
+.camstrip img{height:64px;border-radius:6px;border:2px solid #fff}
+.cambar{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:space-around;background:linear-gradient(#0000,#000c)}
+.cambar button{min-width:96px;min-height:48px;font-size:16px}
+#camShot{width:78px;height:78px;min-width:0;border-radius:50%;background:#fff;border:6px solid #bbb;padding:0}
+#camShot:active{transform:scale(.92);background:#ddd}
+.camerr{position:absolute;top:60px;left:16px;right:16px;color:#fff;background:#a33;padding:10px;border-radius:8px;display:none;font-size:15px}
 .addhint{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:var(--sel);color:#000;border-radius:8px;padding:6px 12px;font-size:13px;display:none}
 .side{display:flex;flex-direction:column;gap:10px;min-height:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -67,6 +78,7 @@ label.f input,label.f select{margin-top:3px}
 .sk{display:none;position:fixed;inset:0;background:var(--bg);z-index:30;flex-direction:column;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
 .sk .tb{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border-bottom:1px solid var(--line);background:var(--card);align-items:center}
 .sk .tb button{min-height:40px;padding:4px 10px}
+.sk .tb button.on{background:#2b6cb0;color:#fff;border-color:#2b6cb0}
 .sk .tb .sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);padding:0;min-height:0}
 .sk .tb .sw.on{outline:3px solid var(--sel)}
 .sk canvas{flex:1;width:100%;touch-action:none;background:#fff;display:block}
@@ -100,7 +112,7 @@ label.f input,label.f select{margin-top:3px}
 <div class="sk" id="sk"><div class="tb">
   <b id="skTitle" style="margin-right:6px"></b>
   <button class="sw on" data-c="#111" style="background:#111" aria-label="검정"></button><button class="sw" data-c="#d93a36" style="background:#d93a36" aria-label="빨강"></button><button class="sw" data-c="#2a6fd1" style="background:#2a6fd1" aria-label="파랑"></button>
-  <button id="skW">굵게</button><button id="skE">지우개</button><button id="skU">되돌리기</button><button id="skC">전체 지우기</button><button id="skBg">도면 모양 끄기</button>
+  <button id="skW">굵게</button><button id="skE">지우개</button><button id="skU">되돌리기</button><button id="skC">전체 지우기</button><button id="skBg">도면 모양 끄기</button><button id="skZi">＋확대</button><button id="skZo">－축소</button><button id="skPan">✋ 이동</button><span id="skZt" class="mut" style="font-size:12px">100%</span>
   <span style="flex:1"></span><button id="skX">취소</button><button id="skS" class="pri">스케치 저장</button>
 </div><canvas id="skc"></canvas></div>
 <div class="modal" id="login" style="display:flex"><div class="card" style="max-width:440px">
@@ -114,6 +126,14 @@ label.f input,label.f select{margin-top:3px}
 </div></div>
 <div class="modal" id="modal"><div class="card" id="modalCard"></div></div>
 <input type="file" id="fileIn" accept="image/*" multiple style="display:none">
+<div class="cam" id="cam">
+  <video id="camV" playsinline muted autoplay></video>
+  <div class="camtop"><b id="camT"></b><span id="camN">0장</span></div>
+  <div class="camflash" id="camF"></div>
+  <div class="camstrip" id="camS"></div>
+  <div class="cambar"><button id="camX">닫기</button><button id="camShot" aria-label="촬영"></button><button id="camOk" class="pri">완료</button></div>
+  <div class="camerr" id="camE"></div>
+</div>
 <script>
 /* 서버 주소를 여기에 넣어 두면 팀원은 암호와 이름만 입력하면 됩니다 (비워 두면 첫 화면에서 입력) */
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxL84gdvPJD7JC0KUqCDlM_dkgepV1tup3U99Uofb6H0PiwEW4Br3h1Gulq0pWwUxbWig/exec";
@@ -311,10 +331,11 @@ function renderForm(){
   const err=document.createElement("div"); err.className="err"; err.id="ferr"; F.appendChild(err);
   if(fe) err.textContent="사진 업로드 오류: "+fe.err;
   const bt=document.createElement("div"); bt.className="btns";
-  const pb=document.createElement("button"); pb.type="button"; pb.textContent="📷 사진 추가"; pb.onclick=()=>{ if(!ensureWho())return; document.getElementById("fileIn").click(); };
+  const cb=document.createElement("button"); cb.type="button"; cb.className="pri"; cb.textContent="📸 연속 촬영"; cb.onclick=()=>{ if(!ensureWho())return; camOpen(d); };
+  const pb=document.createElement("button"); pb.type="button"; pb.textContent="🖼 앨범에서"; pb.onclick=()=>{ if(!ensureWho())return; document.getElementById("fileIn").click(); };
   const s2=document.createElement("button"); s2.type="button"; s2.textContent="임시 저장"; s2.onclick=()=>saveCur(false);
   const sv=document.createElement("button"); sv.type="button"; sv.className="pri"; sv.textContent="완료 저장"; sv.onclick=()=>saveCur(true);
-  bt.append(pb,s2,sv); F.appendChild(bt);
+  bt.append(cb,pb,s2,sv); F.appendChild(bt);
   const sgw=document.createElement("div"); sgw.style.display="flex"; sgw.style.gap="6px"; sgw.style.marginTop="8px"; sgw.style.alignItems="center";
   const sgb=document.createElement("button"); sgb.type="button"; sgb.style.flex="1"; sgb.textContent=draft.seg&&draft.seg.length>1?"📏 구간 다시 그리기":(d.isNew?"📏 선(시작~끝) 그리기":"📏 실측 구간(시작~끝) 표시"); sgb.onclick=()=>segStart(d);
   sgw.appendChild(sgb);
@@ -360,9 +381,24 @@ function removePhoto(d,pid){
 function clearRecord(d){
   const prev=S.pending[d.id]||recOf(d.id)||{};
   const rec={id:d.id,name:d.name,kind:d.kind,L:"",A:"",w:"",h:"",mat:"",matEtc:"",exist:"",memo:"",photos:[],removePhotos:[...(prev.photos||[]),...(prev.removePhotos||[])],done:false,seg:"",segLen:"",by:S.who,at:new Date().toISOString()};
-  queueWrite(rec); S.photosQ=S.photosQ.filter(q=>q.id!==d.id||q.busy);
+  queueWrite(rec); S.photosQ=S.photosQ.filter(q=>{ const keep=q.id!==d.id||q.busy; if(!keep) qdbDel(q.k); return keep; });
   select(d.id,false);
   const e=document.getElementById("ferr"); if(e){ e.style.color="var(--ok)"; e.textContent="입력 기록을 지웠습니다 (사진은 드라이브 휴지통으로 이동)"; } }
+/* ---------- 연속 촬영: 앱 안에서 카메라를 켜고 셔터만 연달아 누름. 찍는 즉시 대기열에 넣고 뒤에서 업로드 ---------- */
+const CAM={st:null,d:null,n:0};
+async function camOpen(d){ CAM.d=d; CAM.n=0; const box=document.getElementById("cam"); document.getElementById("camT").textContent=d.name+" 사진"; document.getElementById("camN").textContent="0장"; document.getElementById("camS").innerHTML=""; const er=document.getElementById("camE"); er.style.display="none"; box.style.display="block";
+  try{ CAM.st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1440}},audio:false});
+    const v=document.getElementById("camV"); v.srcObject=CAM.st; await v.play().catch(()=>{}); }
+  catch(e){ er.style.display="block"; er.textContent="카메라를 켤 수 없습니다: "+(e&&e.name==="NotAllowedError"?"카메라 권한이 거부되었습니다. 설정 › Safari(또는 Chrome) › 카메라를 '허용'으로 바꾼 뒤 다시 시도하세요.":(e&&e.message||e))+"  (그동안은 '🖼 앨범에서'를 쓰세요)"; } }
+function camClose(){ if(CAM.st){ CAM.st.getTracks().forEach(t=>t.stop()); CAM.st=null; } document.getElementById("camV").srcObject=null; document.getElementById("cam").style.display="none"; if(CAM.d&&S.sel===CAM.d.id) renderForm(); renderList(); }
+function camShot(){ const v=document.getElementById("camV"); if(!CAM.st||!v.videoWidth) return;
+  const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight)); const c=document.createElement("canvas"); c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k); c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+  const f=document.getElementById("camF"); f.style.transition="none"; f.style.opacity="0.8"; requestAnimationFrame(()=>{ f.style.transition="opacity .25s"; f.style.opacity="0"; });
+  const id=CAM.d.id; c.toBlob(b=>{ if(!b) return; qAdd(id,b); CAM.n++; document.getElementById("camN").textContent=CAM.n+"장 (업로드는 뒤에서 진행)"; const im=document.createElement("img"); im.src=URL.createObjectURL(b); const sp=document.getElementById("camS"); sp.appendChild(im); sp.scrollLeft=sp.scrollWidth; setSync(); uploadQueue(); },"image/jpeg",0.7); }
+document.getElementById("camShot").onclick=camShot;
+document.getElementById("camX").onclick=camClose;
+document.getElementById("camOk").onclick=camClose;
+document.addEventListener("visibilitychange",()=>{ if(document.hidden&&CAM.st) camClose(); });
 /* ---------- new item ---------- */
 document.getElementById("addBtn").onclick=()=>{ S.addMode=!S.addMode; document.getElementById("addHint").textContent="도면에서 새 지장물 위치를 누르세요"; document.getElementById("addHint").style.display=S.addMode?"block":"none"; document.getElementById("addBtn").classList.toggle("pri",S.addMode); };
 function createNew(x,y){
@@ -414,9 +450,20 @@ function askWho(){
 document.getElementById("whoBtn").onclick=askWho;
 document.getElementById("sync").style.cursor="pointer"; document.getElementById("sync").onclick=()=>document.getElementById("exportBtn").click();
 /* ---------- photos ---------- */
-document.getElementById("fileIn").addEventListener("change",async e=>{ const files=[...e.target.files]; e.target.value=""; if(!files.length||!S.sel)return; const id=S.sel; const blobs=await Promise.all(files.map(shrink)); blobs.forEach(b=>S.photosQ.push({id,blob:b})); setSync(); renderForm(); uploadQueue(); });
+/* 업로드 대기 사진을 태블릿 저장소(IndexedDB)에 보관 → 페이지가 새로고침·종료돼도 이어서 업로드 */
+const QDB={db:null};
+function qdbOpen(){ return new Promise(res=>{ try{ const r=indexedDB.open("fs3_photoq",1); r.onupgradeneeded=()=>r.result.createObjectStore("q",{keyPath:"k"}); r.onsuccess=()=>{ QDB.db=r.result; res(true); }; r.onerror=()=>res(false); }catch(e){ res(false); } }); }
+function qdbPut(q){ if(!QDB.db) return; try{ QDB.db.transaction("q","readwrite").objectStore("q").put({k:q.k,id:q.id,tag:q.tag||"",blob:q.blob,t:Date.now()}); }catch(e){} }
+function qdbDel(k){ if(!QDB.db||!k) return; try{ QDB.db.transaction("q","readwrite").objectStore("q").delete(k); }catch(e){} }
+function qdbAll(){ return new Promise(res=>{ if(!QDB.db) return res([]); try{ const r=QDB.db.transaction("q").objectStore("q").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>res([]); }catch(e){ res([]); } }); }
+function qAdd(id,blob,tag){ const q={k:Date.now()+"_"+Math.random().toString(36).slice(2,8),id,blob,tag:tag||""}; S.photosQ.push(q); qdbPut(q); return q; }
+async function qRestore(){ await qdbOpen(); const rows=await qdbAll(); const have=new Set(S.photosQ.map(q=>q.k)); rows.sort((a,b)=>a.t-b.t).forEach(r=>{ if(!have.has(r.k)) S.photosQ.push({k:r.k,id:r.id,blob:r.blob,tag:r.tag}); }); if(rows.length){ setSync(); renderList(); uploadQueue(); } }
+document.getElementById("fileIn").addEventListener("change",async e=>{ const files=[...e.target.files]; e.target.value=""; if(!files.length||!S.sel)return; const id=S.sel;
+  // 여러 장도 한 장씩 줄여서 바로 대기열에 넣고 곧바로 업로드 시작 (한꺼번에 줄이면 태블릿 메모리 부족)
+  for(let i=0;i<files.length;i++){ S.lastUp=`사진 준비 중 ${i+1}/${files.length}`; setSync(); const b=await shrink(files[i]); qAdd(id,b); if(S.sel===id) renderForm(); uploadQueue(); }
+  S.lastUp=""; setSync(); renderList(); });
 function shrink(file){ return new Promise(res=>{ const img=new Image(); const u=URL.createObjectURL(file); img.onload=()=>{ const k=Math.min(1,1280/Math.max(img.width,img.height)); const c=document.createElement("canvas"); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(u); c.toBlob(b=>res(b||file),"image/jpeg",0.7); }; img.onerror=()=>{URL.revokeObjectURL(u); S.lastUp="사진을 줄이지 못해 원본("+Math.round(file.size/1024)+"KB)으로 보냅니다. 카메라 저장 형식을 JPEG로 바꿔 주세요."; res(file);}; img.src=u; }); }
-let uploading=0; const MAXUP=2; S.lastUp="";
+let uploading=0; const MAXUP=3; S.lastUp="";
 function errText(e){ return (e&&(e.message||e.toString&&e.toString()))||"알 수 없는 오류"; }
 function toDataURL(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
 async function uploadOne(q){
@@ -439,7 +486,7 @@ async function uploadQueue(){
   while(uploading<MAXUP){
     const i=S.photosQ.findIndex(q=>!q.busy && !q.err); if(i<0) break;
     const q=S.photosQ[i]; q.busy=true; uploading++; setSync(); if(S.sel===q.id) renderForm();
-    uploadOne(q).then(()=>{ const k=S.photosQ.indexOf(q); if(k>=0) S.photosQ.splice(k,1); })
+    uploadOne(q).then(()=>{ const k=S.photosQ.indexOf(q); if(k>=0) S.photosQ.splice(k,1); qdbDel(q.k); })
       .catch(e=>{ q.busy=false; q.err=errText(e); q.tries=(q.tries||0)+1; S.lastUp="사진 업로드 실패: "+q.err; })
       .finally(()=>{ uploading--; setSync(); renderList(); if(S.sel===q.id) renderForm(); if(S.photosQ.some(x=>!x.busy&&!x.err)) uploadQueue(); });
   }
@@ -529,33 +576,53 @@ document.getElementById("segU").onclick=()=>{ SEG.pts.pop(); segUpd(); drawItems
 document.getElementById("segX").onclick=()=>segEnd(false);
 document.getElementById("segOk").onclick=()=>segEnd(true);
 /* ---------- sketch ---------- */
-const SK={d:null,strokes:[],cur:null,color:"#111",w:3,eraser:false,bg:true};
+const SK={d:null,strokes:[],cur:null,color:"#111",w:3,eraser:false,bg:true,v:{s:1,tx:0,ty:0},pan:false};
 const skc=document.getElementById("skc"), skx=skc.getContext("2d");
 function skSize(){ const r=skc.getBoundingClientRect(); const dpr=window.devicePixelRatio||1; skc.width=Math.round(r.width*dpr); skc.height=Math.round(r.height*dpr); skx.setTransform(dpr,0,0,dpr,0,0); skDraw(); }
-function skDraw(){ const r=skc.getBoundingClientRect(); skx.fillStyle="#fff"; skx.fillRect(0,0,r.width,r.height);
-  skx.strokeStyle="#eceae4"; skx.lineWidth=1; for(let x=0;x<r.width;x+=25){skx.beginPath();skx.moveTo(x,0);skx.lineTo(x,r.height);skx.stroke();} for(let y=0;y<r.height;y+=25){skx.beginPath();skx.moveTo(0,y);skx.lineTo(r.width,y);skx.stroke();}
+function skDpr(){ return skc.width/Math.max(1,skc.getBoundingClientRect().width); }
+function skWorld(){ const k=skDpr(), v=SK.v; skx.setTransform(k*v.s,0,0,k*v.s,k*v.tx,k*v.ty); }
+function skDraw(){ const r=skc.getBoundingClientRect(); const k0=skDpr(); skx.setTransform(k0,0,0,k0,0,0); skx.fillStyle="#fff"; skx.fillRect(0,0,r.width,r.height); skWorld();
+  skx.strokeStyle="#eceae4"; skx.lineWidth=1/SK.v.s; for(let x=0;x<r.width;x+=25){skx.beginPath();skx.moveTo(x,0);skx.lineTo(x,r.height);skx.stroke();} for(let y=0;y<r.height;y+=25){skx.beginPath();skx.moveTo(0,y);skx.lineTo(r.width,y);skx.stroke();}
   const d=SK.d; if(SK.bg&&d&&d.g){ const [a,b,c,e]=bboxOf(d); const W=Math.max(c-a,0.5),H=Math.max(e-b,0.5); const k=Math.min(r.width*0.8/W,r.height*0.8/H); const ox=r.width/2-k*(a+c)/2, oy=r.height/2+k*(b+e)/2;
-    skx.strokeStyle="rgba(217,98,43,.55)"; skx.fillStyle="rgba(217,98,43,.10)"; skx.lineWidth=4; skx.lineJoin="round";
+    skx.strokeStyle="rgba(217,98,43,.55)"; skx.fillStyle="rgba(217,98,43,.10)"; skx.lineWidth=4/SK.v.s; skx.lineJoin="round";
     d.g.forEach(ring=>{ skx.beginPath(); ring.forEach(([x,y],i)=>{ const px=ox+k*x, py=oy-k*y; i?skx.lineTo(px,py):skx.moveTo(px,py); }); if(d.gt==="P"){skx.closePath();skx.fill();} skx.stroke(); });
-    skx.fillStyle="#6b6a65"; skx.font="14px sans-serif"; skx.fillText(`도면 모양 · 가로 ${W.toFixed(1)}m × 세로 ${H.toFixed(1)}m (북쪽 위)`,10,20); }
+    { const k1=skDpr(); skx.setTransform(k1,0,0,k1,0,0); } skx.fillStyle="#6b6a65"; skx.font="14px sans-serif"; skx.fillText(`도면 모양 · 가로 ${W.toFixed(1)}m × 세로 ${H.toFixed(1)}m (북쪽 위)`,10,20); skWorld(); }
   SK.strokes.concat(SK.cur?[SK.cur]:[]).forEach(s=>{ skx.strokeStyle=s.er?"#fff":s.c; skx.lineWidth=s.w; skx.lineCap="round"; skx.lineJoin="round"; skx.beginPath(); s.p.forEach(([x,y],i)=>i?skx.lineTo(x,y):skx.moveTo(x,y)); if(s.p.length===1){skx.lineTo(s.p[0][0]+0.1,s.p[0][1]);} skx.stroke(); });
 }
-function openSketch(d){ SK.d=d; SK.strokes=[]; SK.cur=null; SK.pid=null; SK.bg=true; document.getElementById("skBg").textContent="도면 모양 끄기"; document.getElementById("skTitle").textContent=d.name+" 스케치"; document.getElementById("sk").style.display="flex"; requestAnimationFrame(skSize); }
+function openSketch(d){ SK.d=d; SK.strokes=[]; SK.cur=null; SK.pid=null; SK.v={s:1,tx:0,ty:0}; SK.tp.clear(); SK.pinch=null; SK.drag=null; skPanMode(false); document.getElementById("skZt").textContent="100%"; SK.bg=true; document.getElementById("skBg").textContent="도면 모양 끄기"; document.getElementById("skTitle").textContent=d.name+" 스케치"; document.getElementById("sk").style.display="flex"; requestAnimationFrame(skSize); }
+/* 스케치 확대·이동: 100%~600%. 저장되는 그림은 항상 100% 화면 전체 */
+function skClamp(){ const r=skc.getBoundingClientRect(), v=SK.v; v.s=Math.max(1,Math.min(6,v.s)); v.tx=Math.min(0,Math.max(r.width*(1-v.s),v.tx)); v.ty=Math.min(0,Math.max(r.height*(1-v.s),v.ty)); document.getElementById("skZt").textContent=Math.round(v.s*100)+"%"; }
+function skZoomAt(f,cx,cy){ const v=SK.v; const ns=Math.max(1,Math.min(6,v.s*f)); const k=ns/v.s; v.tx=cx-(cx-v.tx)*k; v.ty=cy-(cy-v.ty)*k; v.s=ns; skClamp(); skDraw(); }
+function skZoomC(f){ const r=skc.getBoundingClientRect(); skZoomAt(f,r.width/2,r.height/2); }
+function skPanMode(on){ SK.pan=on; document.getElementById("skPan").classList.toggle("on",on); document.getElementById("skPan").textContent=on?"✋ 이동 중 (끄기)":"✋ 이동"; }
+document.getElementById("skZi").onclick=()=>skZoomC(1.5);
+document.getElementById("skZo").onclick=()=>{ skZoomC(1/1.5); if(SK.v.s<=1) skPanMode(false); };
+document.getElementById("skPan").onclick=()=>skPanMode(!SK.pan);
+SK.tp=new Map(); SK.pinch=null; SK.drag=null;
 /* 스케치 입력: 펜(애플펜슬)을 한 번이라도 쓰면 그 뒤로 손바닥·손가락 터치는 무시 */
 SK.pid=null; SK.pen=false;
-function skPt(e,r){ return [e.clientX-r.left,e.clientY-r.top]; }
-function skSeg(s,a,b){ skx.strokeStyle=s.er?"#fff":s.c; skx.lineWidth=s.w; skx.lineCap="round"; skx.lineJoin="round"; skx.beginPath(); skx.moveTo(a[0],a[1]); skx.lineTo(b[0]+(a===b?0.1:0),b[1]); skx.stroke(); }
+function skPt(e,r){ const v=SK.v; return [(e.clientX-r.left-v.tx)/v.s,(e.clientY-r.top-v.ty)/v.s]; }
+function skSeg(s,a,b){ skWorld(); skx.strokeStyle=s.er?"#fff":s.c; skx.lineWidth=s.w; skx.lineCap="round"; skx.lineJoin="round"; skx.beginPath(); skx.moveTo(a[0],a[1]); skx.lineTo(b[0]+(a===b?0.1:0),b[1]); skx.stroke(); }
 skc.addEventListener("pointerdown",e=>{ e.preventDefault();
+  const r0=skc.getBoundingClientRect();
+  if(SK.pan){ SK.drag={id:e.pointerId,x:e.clientX,y:e.clientY}; try{ skc.setPointerCapture(e.pointerId); }catch(x){} return; }
+  if(e.pointerType==="touch"&&!SK.pen){ SK.tp.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(SK.tp.size===2){ if(SK.cur){ SK.cur=null; SK.pid=null; } const [a,b]=[...SK.tp.values()]; SK.pinch={d:Math.hypot(a.x-b.x,a.y-b.y),cx:(a.x+b.x)/2-r0.left,cy:(a.y+b.y)/2-r0.top}; skDraw(); return; }
+    if(SK.tp.size>2) return; }
   if(e.pointerType==="pen"){ SK.pen=true; if(SK.cur&&SK.cur.t!=="pen"){ SK.cur=null; SK.pid=null; skDraw(); } }
   else if(e.pointerType==="touch"&&SK.pen) return;           // 손바닥 무시
   if(SK.cur) return;                                         // 그리는 중에 다른 손가락이 닿아도 무시
   try{ skc.setPointerCapture(e.pointerId); }catch(x){}
   const r=skc.getBoundingClientRect(); SK.pid=e.pointerId;
-  SK.cur={c:SK.color,w:SK.eraser?22:SK.w,er:SK.eraser,t:e.pointerType,p:[skPt(e,r)]}; skSeg(SK.cur,SK.cur.p[0],SK.cur.p[0]); },{passive:false});
-skc.addEventListener("pointermove",e=>{ if(!SK.cur||e.pointerId!==SK.pid) return; e.preventDefault();
+  SK.cur={c:SK.color,w:(SK.eraser?22:SK.w)/SK.v.s,er:SK.eraser,t:e.pointerType,p:[skPt(e,r)]}; skSeg(SK.cur,SK.cur.p[0],SK.cur.p[0]); },{passive:false});
+skc.addEventListener("pointermove",e=>{
+  if(SK.drag&&e.pointerId===SK.drag.id){ e.preventDefault(); SK.v.tx+=e.clientX-SK.drag.x; SK.v.ty+=e.clientY-SK.drag.y; SK.drag.x=e.clientX; SK.drag.y=e.clientY; skClamp(); skDraw(); return; }
+  if(SK.pinch&&SK.tp.has(e.pointerId)){ e.preventDefault(); SK.tp.set(e.pointerId,{x:e.clientX,y:e.clientY}); const r=skc.getBoundingClientRect(); const [a,b]=[...SK.tp.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y), cx=(a.x+b.x)/2-r.left, cy=(a.y+b.y)/2-r.top;
+    SK.v.tx+=cx-SK.pinch.cx; SK.v.ty+=cy-SK.pinch.cy; skZoomAt(d/Math.max(1,SK.pinch.d),cx,cy); SK.pinch={d,cx,cy}; return; }
+  if(!SK.cur||e.pointerId!==SK.pid) return; e.preventDefault();
   const r=skc.getBoundingClientRect(); const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
   evs.forEach(ev=>{ const q=skPt(ev,r), p=SK.cur.p; const last=p[p.length-1]; p.push(q); skSeg(SK.cur,last,q); }); },{passive:false});
-const skEnd=e=>{ if(!SK.cur||e.pointerId!==SK.pid) return; SK.strokes.push(SK.cur); SK.cur=null; SK.pid=null; };
+const skEnd=e=>{ if(SK.drag&&e.pointerId===SK.drag.id){ SK.drag=null; return; } if(SK.tp.has(e.pointerId)){ SK.tp.delete(e.pointerId); if(SK.tp.size<2) SK.pinch=null; } if(!SK.cur||e.pointerId!==SK.pid) return; SK.strokes.push(SK.cur); SK.cur=null; SK.pid=null; };
 skc.addEventListener("pointerup",skEnd); skc.addEventListener("pointercancel",skEnd); skc.addEventListener("lostpointercapture",skEnd);
 // iOS 길게 누르기 메뉴·확대·텍스트 선택 막기 (스케치 화면에서만)
 const skBox=document.getElementById("sk");
@@ -571,10 +638,11 @@ document.getElementById("skC").onclick=e=>{ if(e.target.dataset.c!=="1"){ e.targ
 document.getElementById("skBg").onclick=e=>{ SK.bg=!SK.bg; e.target.textContent=SK.bg?"도면 모양 끄기":"도면 모양 켜기"; skDraw(); };
 document.getElementById("skX").onclick=()=>{ document.getElementById("sk").style.display="none"; };
 document.getElementById("skS").onclick=()=>{ if(!SK.strokes.length){ document.getElementById("skTitle").textContent="먼저 그림을 그리세요"; return; }
-  const id=SK.d.id; skc.toBlob(b=>{ if(!b)return; S.photosQ.push({id,blob:b,tag:"스케치"}); document.getElementById("sk").style.display="none"; setSync(); renderForm(); uploadQueue(); },"image/png"); };
+  SK.v={s:1,tx:0,ty:0}; skClamp(); skDraw();
+  const id=SK.d.id; skc.toBlob(b=>{ if(!b)return; qAdd(id,b,"스케치"); document.getElementById("sk").style.display="none"; setSync(); renderForm(); uploadQueue(); },"image/png"); };
 window.addEventListener("resize",()=>{ if(document.getElementById("sk").style.display==="flex") skSize(); });
 /* ---------- boot ---------- */
-drawStatic(); if(typeof buildLegend==="function") buildLegend(); setupTop(); drawItems(); requestAnimationFrame(()=>fitTo(ZALL)); window.addEventListener("resize",()=>applyView());
+drawStatic(); if(typeof buildLegend==="function") buildLegend(); setupTop(); drawItems(); qRestore(); requestAnimationFrame(()=>fitTo(ZALL)); window.addEventListener("resize",()=>applyView());
 document.getElementById("whoBtn").textContent="입력자: "+(S.who||"미지정");
 setSync("서버 연결 중…");
 pull().then(()=>flush());

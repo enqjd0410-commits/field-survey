@@ -36,6 +36,8 @@ svg#map{width:100%;height:100%;display:block;user-select:none}
 .phw{position:relative;display:inline-block}
 .phx{position:absolute;top:-8px;right:-8px;min-height:0;width:28px;height:28px;padding:0;border-radius:14px;background:#fff;border:1px solid #c0392b;color:#c0392b;font-size:13px;line-height:1}
 .phx.on{width:auto;padding:0 6px;background:#c0392b;color:#fff}
+.mapctl .tg{color:#999}
+.mapctl .tg.on{color:#fff;background:#e8590c;border-color:#e8590c}
 .addhint{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:var(--sel);color:#000;border-radius:8px;padding:6px 12px;font-size:13px;display:none}
 .side{display:flex;flex-direction:column;gap:10px;min-height:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -84,8 +86,8 @@ label.f input,label.f select{margin-top:3px}
 </div>
 <div class="main">
   <div class="mapbox">
-    <svg id="map"><g id="vp"><g id="gbg"></g><g id="gitems"></g><g id="glabels"></g><g id="gme"></g></g></svg>
-    <div class="mapctl"><button id="zin" aria-label="확대">＋</button><button id="zout" aria-label="축소">－</button><button id="zfit">전체</button><button id="gpsBtn">📍 현위치</button><button id="addBtn">＋신규</button></div>
+    <svg id="map"><g id="vp"><g id="gbg"></g><g id="gitems"></g><g id="gjigu" pointer-events="none"></g><g id="glabels"></g><g id="gme"></g></g></svg>
+    <div class="mapctl"><button id="zin" aria-label="확대">＋</button><button id="zout" aria-label="축소">－</button><button id="zfit">전체</button><button id="gpsBtn">📍 현위치</button><button id="addBtn">＋신규</button><button id="jiguBtn" class="tg on">지구계 ON</button></div>
     <div class="segbar" id="segBar"><span id="segTxt"></span><button id="segU">되돌리기</button><button id="segX">취소</button><button id="segOk" class="pri">구간 확정</button></div>
     <div class="addhint" id="addHint">도면에서 새 지장물 위치를 누르세요</div>
     <div class="legend" id="legend"><button id="legBtn" style="min-height:32px;padding:2px 10px;font-size:12px">범례 ▾</button><div id="legBody" style="display:none;margin-top:6px;max-height:46vh;overflow:auto"></div></div>
@@ -114,7 +116,7 @@ label.f input,label.f select{margin-top:3px}
 <input type="file" id="fileIn" accept="image/*" multiple style="display:none">
 <script>
 /* 서버 주소를 여기에 넣어 두면 팀원은 암호와 이름만 입력하면 됩니다 (비워 두면 첫 화면에서 입력) */
-const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxL84gdvPJD7JC0KUqCDlM_dkgepV1tup3U99Uofb6H0PiwEW4Br3h1Gulq0pWwUxbWig/exec";
+const DEFAULT_API_URL = "";
 const CFG = { url: "", key: "" };
 try{ CFG.url=localStorage.getItem("fs3_url")||DEFAULT_API_URL; CFG.key=localStorage.getItem("fs3_key")||""; }catch(e){ CFG.url=DEFAULT_API_URL; }
 async function apiRun(fn,...args){
@@ -146,7 +148,8 @@ try{ S.pending=JSON.parse(localStorage.getItem("fs2_pending")||"{}"); }catch(e){
 const items = DATA.items;
 const byId = Object.fromEntries(items.map(d=>[d.id,d]));
 let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-const ZALL=DATA.zone.concat(DATA.zone2||[]);
+const JIGU=[[187248.44,278921.04],[187217.32,278998.18],[187185.24,279077.72],[187156.27,279157.82],[187141.51,279198.64],[187130.32,279229.57],[187130.32,279242.69],[187230.66,279282.29],[187234.41,279290.05],[187220.52,279345.54],[187202.18,279418.82],[187178.03,279515.28],[187160.21,279569.59],[187239.7,279690.09],[187236.11,279706.99],[187256.39,279738.25],[187257.79,279740.22],[187259.27,279743.19],[187269.99,279750.05],[187278.1,279755.21],[187284.37,279759.15],[187302.13,279769.65],[187319.1,279795.62],[187324.68,279804.29],[187357.39,279855.1],[187378.3,279887.87],[187391.79,279908.89],[187407.57,279934.97],[187415.08,279946.5],[187430.65,279971.18],[187470.49,279951.87],[187495.82,280004.15],[187523.26,280026.74],[187502.54,280044.14],[187494.3,280048.87],[187412.68,280096.33],[187409.43,280098.21],[187416.95,280111.2],[187433.48,280138.22],[187446.96,280160.45],[187462.45,280185.77],[187469.67,280197.48],[187479.19,280213.09],[187482.7,280218.16],[187496.3,280239.22],[187497.32,280240.88],[187499.26,280244.07],[187522.98,280283.03],[187525.37,280287.45],[187532.13,280298.54],[187537.22,280306.88],[187538.76,280309.35],[187543.62,280317.59],[187545.22,280319.98],[187549.15,280326.4],[187564.8,280351.37],[187588.37,280389.27],[187615.67,280433.62],[187625.08,280448.66],[187625.64,280449.59],[187639.89,280471.99],[187680.79,280537.97],[187682.39,280541.4],[187695.7,280562.72],[187703.66,280575.39],[187708.81,280583.64],[187721.31,280603.57],[187749.64,280648.77],[187765.99,280699.01],[187764.62,280709.69],[187885.67,280992.51],[187893.27,281009.85],[187899.69,281018.23],[187907.72,281020.72],[187916.27,281018.41],[187956.84,280938.71],[187967.78,280943.83],[187999.24,280961.8],[188021.05,280974.36],[188021.54,280973.66],[188029.9,280976.87],[188042.39,280985.32],[188041.91,280986.62],[188076.11,281006.31],[188110.03,281026.23],[188132.01,281039.06],[188155.68,281052.97],[188177.5,281065.69],[188193.24,281092.45],[188218.78,281135.52],[188227.33,281149.93],[188234.11,281161.07],[188240.09,281171.39],[188251.58,281190.84],[188282.38,281242.81],[188293.2,281261.31],[188308.39,281286.89],[188322.75,281310.96],[188355.35,281366.54],[188368.16,281388.02],[188383.52,281414.43],[188387.14,281405.88],[188392.4,281392.36],[188393.66,281389.32],[188396.37,281381.99],[188413.99,281337.23],[188421.2,281318.66],[188423.58,281313.0],[188430.49,281295.19],[188431.63,281291.9],[188441.82,281259.44],[188442.79,281256.19],[188450.99,281233.23],[188457.87,281213.74],[188464.61,281195.2],[188470.73,281178.3],[188476.19,281163.24],[188480.16,281152.5],[188482.18,281146.56],[188488.28,281129.6],[188496.51,281107.13],[188505.8,281082.59],[188512.45,281064.06],[188527.82,281019.95],[188533.57,281003.44],[188537.06,280993.34],[188543.51,280976.79],[188544.21,280974.93],[188552.63,280953.23],[188554.69,280947.25],[188565.88,280913.69],[188579.37,280870.05],[188591.22,280831.69],[188593.71,280832.33],[188599.85,280817.18],[188614.32,280781.77],[188618.46,280771.58],[188615.84,280770.12],[188621.88,280754.71],[188625.64,280753.56],[188628.98,280744.66],[188634.28,280730.32],[188643.59,280706.9],[188649.29,280692.85],[188656.35,280671.81],[188661.04,280657.61],[188663.53,280650.33],[188665.54,280644.91],[188675.9,280615.86],[188685.88,280585.7],[188688.17,280579.0],[188692.55,280547.96],[188693.64,280539.85],[188697.8,280525.78],[188704.97,280500.85],[188706.57,280493.68],[188711.22,280473.17],[188713.25,280464.62],[188714.01,280457.15],[188715.96,280439.71],[188717.5,280425.63],[188717.89,280420.73],[188718.13,280417.73],[188720.4,280383.83],[188720.06,280339.78],[188719.8,280339.6],[188718.8,280306.9],[188718.62,280300.94],[188713.63,280295.47],[188717.74,280286.35],[188709.11,280272.48],[188717.83,280242.92],[188719.54,280237.11],[188717.75,280237.06],[188713.86,280216.74],[188712.98,280213.67],[188706.68,280186.45],[188703.57,280174.18],[188702.36,280170.81],[188696.37,280151.65],[188686.45,280121.63],[188683.46,280112.32],[188675.37,280088.42],[188673.14,280082.02],[188666.81,280062.78],[188666.96,280060.14],[188665.9,280059.96],[188663.76,280054.05],[188658.54,280040.94],[188654.41,280030.36],[188639.36,279993.07],[188633.66,279979.46],[188629.63,279971.09],[188627.68,279966.91],[188617.61,279945.86],[188608.41,279927.96],[188608.37,279927.76],[188597.51,279906.9],[188573.56,279861.59],[188547.03,279817.05],[188529.28,279787.13],[188516.48,279765.63],[188508.66,279753.53],[188499.89,279740.84],[188481.0,279715.91],[188469.14,279699.9],[188465.43,279695.53],[188453.92,279681.88],[188439.27,279664.29],[188421.31,279643.81],[188405.15,279627.67],[188375.3,279598.05],[188371.0,279594.13],[188364.44,279587.86],[188358.4,279582.19],[188357.82,279581.65],[188357.79,279581.62],[188356.02,279579.95],[188353.6,279577.68],[188353.12,279577.23],[188351.04,279575.23],[188342.88,279568.65],[188329.31,279557.66],[188325.15,279554.33],[188281.85,279522.67],[188262.8,279507.84],[188259.86,279505.53],[188234.74,279486.29],[188214.04,279469.4],[188204.32,279462.04],[188199.46,279459.04],[188179.66,279446.65],[188144.22,279424.32],[188137.34,279420.14],[188095.01,279394.97],[188091.81,279393.24],[188049.54,279372.04],[188024.85,279359.95],[188008.1,279351.55],[187966.84,279330.45],[187955.68,279324.77],[187928.11,279310.49],[187909.68,279300.93],[187875.29,279283.93],[187864.88,279279.12],[187860.74,279277.27],[187841.98,279267.97],[187820.58,279257.51],[187816.5,279255.86],[187811.89,279253.46],[187800.98,279247.97],[187794.38,279244.48],[187766.56,279230.16],[187748.24,279220.93],[187744.27,279230.67],[187731.88,279223.26],[187726.63,279220.1],[187719.33,279216.05],[187706.75,279208.38],[187677.68,279193.65],[187655.51,279182.32],[187598.76,279154.79],[187594.19,279152.51],[187573.87,279140.74],[187535.4,279120.41],[187514.46,279109.37],[187483.31,279091.83],[187460.76,279077.86],[187439.81,279064.65],[187413.68,279048.37],[187388.12,279032.51],[187385.11,279030.65],[187352.74,279007.16],[187345.75,279001.8],[187317.32,278979.25],[187300.22,278965.91],[187280.05,278949.9],[187254.39,278926.49]]; // 임시지구계 (원 좌표 +5000, 사본 구역 기준)
+const ZALL=DATA.zone.concat(DATA.zone2||[],JIGU);
 ZALL.forEach(([x,y])=>{minx=Math.min(minx,x);maxx=Math.max(maxx,x);miny=Math.min(miny,y);maxy=Math.max(maxy,y)});
 minx-=150;miny-=150;maxx+=150;maxy+=150;
 const X=x=>x-minx, Y=y=>maxy-y;
@@ -185,7 +188,14 @@ function drawStatic(){
   (DATA.bg.road||[]).forEach(p=>el("path",{d:pth(p),fill:"none",stroke:"#b4b2a9","stroke-width":1,"vector-effect":"non-scaling-stroke"},g));
   (DATA.bg.ammo||[]).forEach(p=>el("path",{d:pth(p),fill:"none",stroke:"#888","stroke-width":1.5,"stroke-dasharray":"6 4","vector-effect":"non-scaling-stroke"},g));
   [DATA.zone,DATA.zone2].filter(Boolean).forEach(z=>el("path",{d:pth(z)+"Z",fill:"none",stroke:"#666","stroke-width":1.5,"stroke-dasharray":"10 6","vector-effect":"non-scaling-stroke"},g));
+  const jg=document.getElementById("gjigu"); jg.innerHTML="";
+  el("path",{d:pth(JIGU)+"Z",fill:"none",stroke:"#fff","stroke-width":5,"stroke-opacity":0.7,"stroke-linejoin":"round","vector-effect":"non-scaling-stroke"},jg);
+  el("path",{d:pth(JIGU)+"Z",fill:"none",stroke:JIGUCOL,"stroke-width":2.5,"stroke-dasharray":"18 5 3 5","stroke-linejoin":"round","vector-effect":"non-scaling-stroke"},jg);
+  jiguShow();
 }
+const JIGUCOL="#e8590c";
+let jiguOn=true; try{ jiguOn=localStorage.getItem("fs3_jigu")!=="0"; }catch(e){}
+function jiguShow(){ const g=document.getElementById("gjigu"); if(g) g.style.display=jiguOn?"":"none"; const b=document.getElementById("jiguBtn"); if(b){ b.classList.toggle("on",jiguOn); b.textContent=jiguOn?"지구계 ON":"지구계 OFF"; } }
 function drawItems(){
   const g=document.getElementById("gitems"); g.innerHTML="";
   const selD=[]; const gd=document.createElementNS(NS,"g");
@@ -459,6 +469,7 @@ function buildLegend(){
   order.forEach(k=>{ const c=KCOL[k]; const poly=items.some(d=>d.kind===k&&d.gt==="P");
     row(poly?`<rect x="3" y="2" width="24" height="10" fill="${c}" fill-opacity=".3" stroke="#222" stroke-opacity=".45" stroke-width="3"/><rect x="3" y="2" width="24" height="10" fill="none" stroke="${c}" stroke-width="2"/>`:`<line x1="2" y1="7" x2="28" y2="7" stroke="#222" stroke-opacity=".45" stroke-width="5" stroke-linecap="round"/><line x1="2" y1="7" x2="28" y2="7" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`, k); });
   row(`<circle cx="15" cy="7" r="4" fill="${NEWCOL}"/>`,"신규(도면 외)");
+  row(`<line x1="2" y1="7" x2="28" y2="7" stroke="${JIGUCOL}" stroke-width="3" stroke-dasharray="9 3 2 3"/>`,"임시지구계 (지구계 버튼으로 켜고 끄기)");
   row(`<line x1="5" y1="7" x2="25" y2="7" stroke="#e0218a" stroke-width="3" stroke-dasharray="5 3"/><circle cx="5" cy="7" r="3.5" fill="#1e9e3a" stroke="#fff"/><circle cx="25" cy="7" r="3.5" fill="#d93a36" stroke="#fff"/>`,"실측 구간 (초록 시작 · 빨강 끝)");
   row(`<circle cx="15" cy="7" r="6" fill="#3f8f1f" stroke="#fff"/><path d="M12 7 L14 9.5 L18.5 4.5" stroke="#fff" stroke-width="2" fill="none"/>`,"조사 완료(흐리게)");
   row(`<circle cx="15" cy="7" r="6" fill="#1a73e8" fill-opacity=".2"/><circle cx="15" cy="7" r="3.5" fill="#1a73e8" stroke="#fff" stroke-width="1.5"/>`,"내 현위치");
@@ -495,6 +506,7 @@ document.getElementById("gpsBtn").onclick=()=>{
   }, {enableHighAccuracy:true, maximumAge:5000, timeout:20000});
 };
 function centerXY(x,y){ const r=svg.getBoundingClientRect(); if(view.s<3) view.s=4; view.tx=r.width/2-view.s*X(x); view.ty=r.height/2-view.s*Y(y); applyView(); }
+document.getElementById("jiguBtn").onclick=()=>{ jiguOn=!jiguOn; try{ localStorage.setItem("fs3_jigu",jiguOn?"1":"0"); }catch(e){} jiguShow(); };
 /* ---------- 실측 구간 (시작~끝) ---------- */
 const SEG={on:false,id:null,pts:[]};
 const SEGCOL="#e0218a";
